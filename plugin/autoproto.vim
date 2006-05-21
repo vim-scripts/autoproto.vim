@@ -30,7 +30,7 @@
 "    cream-pop.vim
 "    CursorHold example
 "
-" Version: 0.01
+" Version: 0.02
 " Last Modified: May 21, 2006
 "
 "
@@ -162,6 +162,9 @@ function! Get_last_word(...)
  
 
  "could be a new function definition...  
+
+ if strridx (line, "=") == -1
+
   if strpart(line, 0, 6) == "static"
     call Debug ("static found")
     return 0
@@ -217,6 +220,7 @@ function! Get_last_word(...)
     return 0
   endif 
 
+  endif
 
   "comma ?
  let comma=strridx (line, ",")
