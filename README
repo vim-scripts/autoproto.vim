@@ -1,0 +1,6 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=1553
+
+The "autoproto" plugin displays the function parameter/prototypes
+in the preview window if you type a left parenthesis behind a function name.
+With this plugin it is not necessary to memorize large parameter lists.
+You do not need to leave insert mode. Typing is almost not affected. 
