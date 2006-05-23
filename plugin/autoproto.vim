@@ -30,8 +30,8 @@
 "    cream-pop.vim
 "    CursorHold example
 "
-" Version: 0.02
-" Last Modified: May 21, 2006
+" Version: 0.03
+" Last Modified: May 23, 2006
 "
 "
 " The "autoproto" plugin displays the function parameter/prototypes
@@ -63,7 +63,7 @@
 function! Debug (...)
 
  "remove for debug
- return
+  return
  
   let i  = 1
   let msg= ""
@@ -102,30 +102,68 @@ function! Rm_leading_spaces (string)
  
 endfunction
 
+function Rm_trailing_spaces (string)
+
+  let line=a:string
+  let string_len = strlen (line)
+  let last_letter=string_len - 1
+  let space_count = 0
+  
+  while 1==1
+
+    if line[last_letter] != " "
+      break
+    else
+      let last_letter=last_letter  - 1
+      let space_count = space_count + 1
+      call Debug ("space_count: " . space_count) 
+
+      if space_count > 1
+        call Debug ("too many trailing spaces -> skip")
+        return 0
+      endif
+
+    endif
+
+    if last_letter <= 1
+      call Debug ("trailing spaces problem -> skip")
+      return 0
+    endif
+
+  endwhile                              
+
+  return strpart(line, 0, last_letter + 1)          
+
+endfunction    
+
 function! Get_last_word(...)
 
   call Debug ("function: Get_last_word")
 
   let line=getline (".")
+  let line_len=strlen (line)
   call Debug ("line: <" . line . ">")
    
-  if strlen (line) <= 1
+  if line_len < 1
     call Debug ("line too short -> skip")
     return 0
   endif
 
-
-  "remove trailing spaces
-  if line[strlen(line) -1] == " "
-    if line[strlen(line) -2] == " "
-      call Debug ("too many trailing spaces --> skip")
-     return 0
-    else
-      let line= strpart(line, 0, strlen(line) -1)
+  if line_len == 1
+    if line == " "
+      call Debug ("line is only one blank --> skip")
+      return
     endif
   endif
+  
 
-  call Debug ("without end bracket: <" .  line. ">" )
+  let line=Rm_trailing_spaces (line)
+
+  if line == "0"
+      return 0
+  endif
+
+  call Debug ("after remove trailing spaces: <" .  line. ">" )
 
   let line=Rm_leading_spaces(line) 
   if line == "0"
@@ -133,37 +171,37 @@ function! Get_last_word(...)
   endif  
 
 
- "could be inside a comment
-   if strpart(line, 0, 2) == "/*"
-     call Debug ("large comment found")
-     return 0
-    endif
+  "could be inside a comment
+  if strpart(line, 0, 2) == "/*"
+    call Debug ("large comment found")
+    return 0
+  endif
 
-   if strpart(line, 0, 2) == "//"
-     call Debug ("line comment found")
-     return 0
-   endif
+  if strpart(line, 0, 2) == "//"
+    call Debug ("line comment found")
+    return 0
+  endif
 
 
- "semicolon ?
- let semi=strridx (line, ";")
- if semi != -1
-  let line=strpart(line, semi+1)
-  call Debug("after last semi: <" . line . ">")      
- endif   
+  "semicolon ?
+  let semi=strridx (line, ";")
+  if semi != -1
+    let line=strpart(line, semi+1)
+    call Debug("after last semi: <" . line . ">")      
+  endif   
 
- let line=Rm_leading_spaces(line)   
- call Debug("line after leading_spaces after semi: <" . line . ">")
- if line == "0"
-   return 0
- endif
+  let line=Rm_leading_spaces(line)   
+  call Debug("line after leading_spaces after semi: <" . line . ">")
+  if line == "0"
+    return 0
+  endif
 
- call Debug ("cleand line: <" . line . ">")
+  call Debug ("cleand line: <" . line . ">")
  
 
- "could be a new function definition...  
+  "could be a new function definition...  
 
- if strridx (line, "=") == -1
+  if strridx (line, "=") == -1
 
   if strpart(line, 0, 6) == "static"
     call Debug ("static found")
@@ -467,6 +505,12 @@ function! Open_bracket (...)
 
   call Debug ("tag is:<" . last_word . ">") 
 
+  silent! wincmd P
+  if &previewwindow
+    match none
+    wincmd p
+  endif
+
   try
     exe "ptag " . last_word
   catch
@@ -475,21 +519,36 @@ function! Open_bracket (...)
   endtry
 
   silent! wincmd P		
-  if &previewwindow	 
+  if &previewwindow	
+ 
 	  if has("folding")
 	    silent! .foldopen
 	  endif
+
+    let cur_pos=winline()
+    if cur_pos <= 1 
+      let cur_pos = 0
+    else
+      let cur_pos=cur_pos -1
+    endif
+
 	  call search("$", "b")
 	  let w = substitute(last_word, '\\', '\\\\', "")
 	  call search('\<\V' . last_word . '\>')
     hi previewWord term=bold ctermbg=green guibg=green
     exe 'match previewWord "\%' . line(".") . 'l\%' . col(".") . 'c\k*"'
+
+    if cur_pos != 0
+      execute "normal " . cur_pos . "\<C-e>"
+    endif
+
     wincmd p 
+
   endif
 
 endfunction
 
-function Map_comma (...)
+function! Map_comma (...)
 
   inoremap <silent> <buffer> ( <C-o>:call Open_bracket()<CR>(
 
