@@ -30,8 +30,8 @@
 "    cream-pop.vim
 "    CursorHold example
 "
-" Version: 0.03
-" Last Modified: May 23, 2006
+" Version: 0.04
+" Last Modified: Jun 1, 2006
 "
 "
 " The "autoproto" plugin displays the function parameter/prototypes
@@ -63,7 +63,7 @@
 function! Debug (...)
 
  "remove for debug
-  return
+ return
  
   let i  = 1
   let msg= ""
@@ -489,33 +489,19 @@ function! Get_last_word(...)
 
 endfunction
 
-function! Open_bracket (...)
-
-  let last_word = Get_last_word()
-
-  if last_word == "0"
-    call Debug ("tag is 0 -> skip")
-    return
-  endif
-
-  if strlen (last_word) < 1
-    call Debug ("tag has zero length -> skip")
-    return
-  endif
-
-  call Debug ("tag is:<" . last_word . ">") 
+function! Display_tag (tag)
 
   silent! wincmd P
-  if &previewwindow
-    match none
-    wincmd p
+    if &previewwindow
+      match none
+     wincmd p
   endif
 
   try
-    exe "ptag " . last_word
+    exe "ptag " . a:tag
   catch
     call Debug ("ptag failed !")
-    return
+    return 0
   endtry
 
   silent! wincmd P		
@@ -533,8 +519,8 @@ function! Open_bracket (...)
     endif
 
 	  call search("$", "b")
-	  let w = substitute(last_word, '\\', '\\\\', "")
-	  call search('\<\V' . last_word . '\>')
+	  let w = substitute(a:tag, '\\', '\\\\', "")
+	  call search('\<\V' . a:tag . '\>')
     hi previewWord term=bold ctermbg=green guibg=green
     exe 'match previewWord "\%' . line(".") . 'l\%' . col(".") . 'c\k*"'
 
@@ -546,7 +532,181 @@ function! Open_bracket (...)
 
   endif
 
+  return 1
+
+endfunction 
+
+function! Semi_typed()
+
+  call Debug ("Semi_typed, reset all")
+
+  call Unmap_semi()
+  call Unmap_close_bracket()
+
+
+  if exists ("b:recent_braces")
+    unlet b:recent_braces
+  endif
+
+
 endfunction
+
+
+function! Unmap_close_bracket()
+
+  try
+    iunmap <silent> <buffer> )
+  catch
+    call Debug ("umap close bracket failed but catched!")
+  endtry
+endfunction
+
+function! Map_close_bracket()
+
+  try
+     inoremap <silent> <buffer> ) )<ESC>:call Close_bracket()<CR>A
+  catch
+    call Debug ("map close bracket failed")
+   endtry
+
+endfunction
+    
+function! Map_semi()
+
+  try
+     inoremap <silent> <buffer>; ;<C-o>:call Semi_typed()<CR>
+  catch
+    call Debug ("mapping semi failed")
+   endtry
+
+endfunction                                
+
+function! Unmap_semi()
+
+  try
+     iunmap <silent> <buffer> ;
+  catch
+    call Debug ("unmap semi failed")
+   endtry
+
+endfunction    
+ 
+ 
+function! Close_bracket()
+
+  call Debug ("close bracket")
+
+  if !exists ("b:recent_braces")
+    call Debug ("no recent_braces in close_bracket")
+    call Unmap_close_bracket ()
+    return
+  endif
+
+  execute "normal %"  
+  let brace_pos=getpos(".") 
+  execute "normal %"     
+
+  let brace_line=brace_pos[1]
+  let brace_column=brace_pos[2]
+
+  call Debug ("found matching brace at: brace_line: " . brace_line . " brace_column: " . brace_column )
+
+  let tag_iter = 0
+  let tag_index = -1
+    
+  for list_line in b:recent_braces
+  
+    if list_line[1] == brace_line
+      if list_line[2] == brace_column
+  
+        let  tag_index=tag_iter
+        break
+      endif
+    endif
+
+    let tag_iter = tag_iter +1
+  endfor
+
+
+  if tag_index != -1
+    call Debug ("matchin tag: <" . b:recent_braces[tag_index][0] . ">" )
+  else
+    call Debug ("no matching tag found")
+    return
+  endif
+
+  if tag_index == 0 
+    call Debug ("last recent tag: delete recent_braces list, unmap")
+    unlet b:recent_braces
+    call Unmap_close_bracket()
+  
+    silent! wincmd P
+    if &previewwindow
+      match none
+     wincmd p
+    endif     
+
+
+    return
+  endif
+
+  let tag_to_display = b:recent_braces[tag_index-1][0]
+  call Debug ("tag_to_display: " . tag_to_display)
+
+
+  call remove (b:recent_braces, tag_index)
+
+  call Display_tag (tag_to_display)
+
+  
+endfunction
+
+
+function! Open_bracket (...)
+
+  let brace_pos=getpos(".") 
+ 
+  let last_word = Get_last_word()
+
+  if last_word == "0"
+    call Debug ("tag is 0 -> skip")
+    return
+  endif
+
+  if strlen (last_word) < 1
+    call Debug ("tag has zero length -> skip")
+    return
+  endif
+
+  call Debug ("tag is:<" . last_word . ">") 
+
+  if last_word =~ '\a' 
+    call Debug ("letters...")
+  else
+    call Debug ("no letters found -> skip")
+    return
+  endif
+
+  if Display_tag (last_word) != "0"
+
+    let brace_line=brace_pos[1]
+    let brace_column=brace_pos[2] + 1
+
+    call Debug ("brace_line: " . brace_line . " brace_column: " . brace_column )
+
+    if !exists ("b:recent_braces")
+      call Debug ("no recent_braces")
+      let b:recent_braces=[[last_word, brace_line, brace_column]]
+      call Map_close_bracket()
+      call Map_semi()
+    else
+      call Debug ("resent_braces exist")
+      call add (b:recent_braces, [last_word, brace_line, brace_column])
+    endif
+  endif
+
+endfunction
+
 
 function! Map_comma (...)
 
