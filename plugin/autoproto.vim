@@ -30,8 +30,8 @@
 "    cream-pop.vim
 "    CursorHold example
 "
-" Version: 0.04
-" Last Modified: Jun 1, 2006
+" Version: 0.05
+" Last Modified: Jun 7, 2006
 "
 "
 " The "autoproto" plugin displays the function parameter/prototypes
@@ -497,12 +497,27 @@ function! Display_tag (tag)
      wincmd p
   endif
 
+  let ignorec=&ignorecase
+  if ignorec==1
+    call Debug ("ignorecase is set")
+    set noignorecase
+  endif      
+
   try
     exe "ptag " . a:tag
   catch
     call Debug ("ptag failed !")
+
+    if ignorec == 1
+      set ignorecase
+    endif   
+
     return 0
   endtry
+
+  if ignorec == 1
+      set ignorecase
+  endif  
 
   silent! wincmd P		
   if &previewwindow	
