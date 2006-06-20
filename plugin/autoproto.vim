@@ -30,8 +30,8 @@
 "    cream-pop.vim
 "    CursorHold example
 "
-" Version: 0.05
-" Last Modified: Jun 7, 2006
+" Version: 0.06
+" Last Modified: Jun 20, 2006
 "
 "
 " The "autoproto" plugin displays the function parameter/prototypes
@@ -134,28 +134,11 @@ function Rm_trailing_spaces (string)
 
   return strpart(line, 0, last_letter + 1)          
 
-endfunction    
+endfunction 
 
-function! Get_last_word(...)
+function! Chop_it (da_line)
 
-  call Debug ("function: Get_last_word")
-
-  let line=getline (".")
-  let line_len=strlen (line)
-  call Debug ("line: <" . line . ">")
-   
-  if line_len < 1
-    call Debug ("line too short -> skip")
-    return 0
-  endif
-
-  if line_len == 1
-    if line == " "
-      call Debug ("line is only one blank --> skip")
-      return
-    endif
-  endif
-  
+  let line=a:da_line
 
   let line=Rm_trailing_spaces (line)
 
@@ -485,9 +468,10 @@ function! Get_last_word(...)
     break  
   endwhile
 
- return line
+  return line                    
 
 endfunction
+
 
 function! Display_tag (tag)
 
@@ -579,13 +563,14 @@ endfunction
 function! Map_close_bracket()
 
   try
-     inoremap <silent> <buffer> ) )<ESC>:call Close_bracket()<CR>A
+     inoremap <silent> <buffer> ) )<ESC>:call Close_bracket()<CR>li
   catch
     call Debug ("map close bracket failed")
    endtry
 
 endfunction
-    
+
+
 function! Map_semi()
 
   try
@@ -594,7 +579,8 @@ function! Map_semi()
     call Debug ("mapping semi failed")
    endtry
 
-endfunction                                
+endfunction 
+
 
 function! Unmap_semi()
 
@@ -680,43 +666,76 @@ endfunction
 function! Open_bracket (...)
 
   let brace_pos=getpos(".") 
- 
-  let last_word = Get_last_word()
 
-  if last_word == "0"
+  call Debug ("function: Open_bracket")
+
+  let line=getline (".")
+  let line_len=strlen (line)
+  call Debug ("line: <" . line . ">")
+  call Debug ("line_len: " . line_len)
+  
+  call Debug ("brace_pos[2]:" . brace_pos[2]) 
+
+  let cursor_column=brace_pos[2]  
+    
+  if line_len < 1
+    call Debug ("line too short -> skip")
+    return 0
+  endif
+
+  if line_len == 1
+    if line == " "
+      call Debug ("line is only one blank --> skip")
+      return
+    endif
+  endif
+
+  let eol=1
+  
+  if line_len > cursor_column
+    let line=strpart (line, 0, cursor_column-1)
+    "call Semi_typed () 
+    let eol=0
+    call Debug ("line before cursor: <" . line . ">" )
+  endif                      
+
+  let line=Chop_it (line)
+         
+
+  if line == "0"
     call Debug ("tag is 0 -> skip")
     return
   endif
 
-  if strlen (last_word) < 1
+  if strlen (line) < 1
     call Debug ("tag has zero length -> skip")
     return
   endif
 
-  call Debug ("tag is:<" . last_word . ">") 
+  call Debug ("tag is:<" . line . ">") 
 
-  if last_word =~ '\a' 
+  if line =~ '\a' 
     call Debug ("letters...")
   else
     call Debug ("no letters found -> skip")
     return
   endif
 
-  if Display_tag (last_word) != "0"
+  if Display_tag (line) != "0"
 
     let brace_line=brace_pos[1]
-    let brace_column=brace_pos[2] + 1
-
+    let brace_column=brace_pos[2] + eol
+    
     call Debug ("brace_line: " . brace_line . " brace_column: " . brace_column )
 
     if !exists ("b:recent_braces")
       call Debug ("no recent_braces")
-      let b:recent_braces=[[last_word, brace_line, brace_column]]
+      let b:recent_braces=[[line, brace_line, brace_column]]
       call Map_close_bracket()
       call Map_semi()
     else
       call Debug ("resent_braces exist")
-      call add (b:recent_braces, [last_word, brace_line, brace_column])
+      call add (b:recent_braces, [line, brace_line, brace_column])
     endif
   endif
 
