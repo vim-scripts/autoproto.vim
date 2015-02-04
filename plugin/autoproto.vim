@@ -102,7 +102,7 @@ function! Rm_leading_spaces (string)
  
 endfunction
 
-function Rm_trailing_spaces (string)
+function! Rm_trailing_spaces (string)
 
   let line=a:string
   let string_len = strlen (line)
